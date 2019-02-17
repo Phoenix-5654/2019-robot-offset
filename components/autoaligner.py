@@ -55,14 +55,20 @@ class AutoAligner:
     def enable(self):
         self.enable_x()
         self.enable_y()
-
+    def reset(self):
+        self.x_controller.reset()
+        self.y_controller.reset()
+        self.x_enabled = False
+        self.y_enabled = False
+        self.positioned = 0
+        self.drivetrain.unlock()
     def execute(self):
 
         if self.x_enabled or self.y_enabled:
             self.drivetrain.lock()
             x_output = self.x_controller.update()
             y_output = self.y_controller.update()
-            self.drivetrain.move(x_output, y_output)
+            self.drivetrain.move(x_output, -y_output)
 
             if self.x_controller.atReference() and self.y_controller.atReference():
                 self.positioned += 1
@@ -70,9 +76,5 @@ class AutoAligner:
                 self.positioned = 0
 
             if self.positioned == self.CHECKS:
-                self.x_controller.reset()
-                self.y_controller.reset()
-                self.x_enabled = False
-                self.y_enabled = False
-                self.positioned = 0
-                self.drivetrain.unlock()
+                self.reset()
+

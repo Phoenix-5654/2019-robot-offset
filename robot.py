@@ -31,9 +31,15 @@ class MyRobot(MagicRobot):
             self.left, self.right
         )
 
-        self.joystick = wpilib.Joystick(0)
+        self.right_joystick = wpilib.Joystick(0)
+        self.left_joystick = wpilib.Joystick(1)
 
-        self.controller = wpilib.XboxController(1)
+        self.controller = wpilib.XboxController(2)
+    def testInit(self):
+        self.auto_aligner.reset()
+
+    def teleopInit(self):
+        self.auto_aligner.reset()
 
     def teleopPeriodic(self):
 
@@ -41,7 +47,9 @@ class MyRobot(MagicRobot):
             self.auto_aligner.enable_x()
 
         if not self.drivetrain.locked:
-            self.drivetrain.move(self.joystick.getX(), -self.joystick.getY())
+
+            self.drivetrain.tank_move(-self.left_joystick.getY(),
+                                      -self.right_joystick.getY())
 
 
 if __name__ == "__main__":
