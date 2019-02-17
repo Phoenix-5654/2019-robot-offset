@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 from heapq import nsmallest
 from math import sqrt
+import itertools
+
 
 import cv2
 import numpy as np
@@ -10,6 +12,153 @@ from cscore import CameraServer, UsbCamera, VideoSource
 
 HORIZONTAL_RES = 240
 VERTICAL_RES = 320
+SETPOINT = (VERTICAL_RES // 2, HORIZONTAL_RES // 2 + 38)
+JSON_CONFING = """
+    {
+    "fps": 90,
+    "height": 240,
+    "pixel format": "mjpeg",
+    "properties": [
+        {
+            "name": "connect_verbose",
+            "value": 1
+        },
+        {
+            "name": "raw_brightness",
+            "value": 50
+        },
+        {
+            "name": "brightness",
+            "value": 35
+        },
+        {
+            "name": "raw_contrast",
+            "value": 0
+        },
+        {
+            "name": "contrast",
+            "value": 30
+        },
+        {
+            "name": "raw_saturation",
+            "value": 0
+        },
+        {
+            "name": "saturation",
+            "value": 100
+        },
+        {
+            "name": "red_balance",
+            "value": 1000
+        },
+        {
+            "name": "blue_balance",
+            "value": 1000
+        },
+        {
+            "name": "horizontal_flip",
+            "value": false
+        },
+        {
+            "name": "vertical_flip",
+            "value": false
+        },
+        {
+            "name": "power_line_frequency",
+            "value": 1
+        },
+        {
+            "name": "raw_sharpness",
+            "value": 0
+        },
+        {
+            "name": "sharpness",
+            "value": 50
+        },
+        {
+            "name": "color_effects",
+            "value": 0
+        },
+        {
+            "name": "rotate",
+            "value": 0
+        },
+        {
+            "name": "color_effects_cbcr",
+            "value": 32896
+        },
+        {
+            "name": "video_bitrate_mode",
+            "value": 0
+        },
+        {
+            "name": "video_bitrate",
+            "value": 10000000
+        },
+        {
+            "name": "repeat_sequence_header",
+            "value": false
+        },
+        {
+            "name": "h264_i_frame_period",
+            "value": 60
+        },
+        {
+            "name": "h264_level",
+            "value": 11
+        },
+        {
+            "name": "h264_profile",
+            "value": 4
+        },
+        {
+            "name": "auto_exposure",
+            "value": 0
+        },
+        {
+            "name": "exposure_time_absolute",
+            "value": 1000
+        },
+        {
+            "name": "exposure_dynamic_framerate",
+            "value": false
+        },
+        {
+            "name": "auto_exposure_bias",
+            "value": 12
+        },
+        {
+            "name": "white_balance_auto_preset",
+            "value": 1
+        },
+        {
+            "name": "image_stabilization",
+            "value": false
+        },
+        {
+            "name": "iso_sensitivity",
+            "value": 0
+        },
+        {
+            "name": "iso_sensitivity_auto",
+            "value": 1
+        },
+        {
+            "name": "exposure_metering_mode",
+            "value": 0
+        },
+        {
+            "name": "scene_mode",
+            "value": 0
+        },
+        {
+            "name": "compression_quality",
+            "value": 30
+        }
+    ],
+    "width": 320
+}
+    """
 
 
 class GripPipeline:
@@ -173,156 +322,35 @@ class GripPipeline:
             output.append(cv2.convexHull(contour))
         return output
 
+class Shape:
+    def __init__(self, points, center, angle, width, height):
+        self.points = points
+        self.center = center
+        self.angle = abs(angle)
+        self.width = width
+        self.height = height
+
+    def get_lowest_point(self):
+        return self.points[0]
+
+    def get_second_highest_point(self):
+        return nsmallest(2, self.points, key=lambda x: x[1])[-1]
+
+    def get_approx_area(self):
+        return self.width * self.height
+
+    def get_middle_point(self, shape):
+        return get_average_point(self.center, shape.center)
+
+
+def get_average_point(point1, point2):
+    return (int(point1[0] + point2[0]) // 2,
+            int(point1[1] + point2[1]) // 2)
+
 def start_camera():
     inst = CameraServer.getInstance()
     camera = UsbCamera('Hatch Panels', '/dev/video0')
-    camera.setConfigJson(
-    """
-    {
-    "fps": 90,
-    "height": 240,
-    "pixel format": "mjpeg",
-    "properties": [
-        {
-            "name": "connect_verbose",
-            "value": 1
-        },
-        {
-            "name": "raw_brightness",
-            "value": 50
-        },
-        {
-            "name": "brightness",
-            "value": 35
-        },
-        {
-            "name": "raw_contrast",
-            "value": 0
-        },
-        {
-            "name": "contrast",
-            "value": 30
-        },
-        {
-            "name": "raw_saturation",
-            "value": 0
-        },
-        {
-            "name": "saturation",
-            "value": 100
-        },
-        {
-            "name": "red_balance",
-            "value": 1000
-        },
-        {
-            "name": "blue_balance",
-            "value": 1000
-        },
-        {
-            "name": "horizontal_flip",
-            "value": false
-        },
-        {
-            "name": "vertical_flip",
-            "value": false
-        },
-        {
-            "name": "power_line_frequency",
-            "value": 1
-        },
-        {
-            "name": "raw_sharpness",
-            "value": 0
-        },
-        {
-            "name": "sharpness",
-            "value": 50
-        },
-        {
-            "name": "color_effects",
-            "value": 0
-        },
-        {
-            "name": "rotate",
-            "value": 0
-        },
-        {
-            "name": "color_effects_cbcr",
-            "value": 32896
-        },
-        {
-            "name": "video_bitrate_mode",
-            "value": 0
-        },
-        {
-            "name": "video_bitrate",
-            "value": 10000000
-        },
-        {
-            "name": "repeat_sequence_header",
-            "value": false
-        },
-        {
-            "name": "h264_i_frame_period",
-            "value": 60
-        },
-        {
-            "name": "h264_level",
-            "value": 11
-        },
-        {
-            "name": "h264_profile",
-            "value": 4
-        },
-        {
-            "name": "auto_exposure",
-            "value": 0
-        },
-        {
-            "name": "exposure_time_absolute",
-            "value": 1000
-        },
-        {
-            "name": "exposure_dynamic_framerate",
-            "value": false
-        },
-        {
-            "name": "auto_exposure_bias",
-            "value": 12
-        },
-        {
-            "name": "white_balance_auto_preset",
-            "value": 1
-        },
-        {
-            "name": "image_stabilization",
-            "value": false
-        },
-        {
-            "name": "iso_sensitivity",
-            "value": 0
-        },
-        {
-            "name": "iso_sensitivity_auto",
-            "value": 1
-        },
-        {
-            "name": "exposure_metering_mode",
-            "value": 0
-        },
-        {
-            "name": "scene_mode",
-            "value": 0
-        },
-        {
-            "name": "compression_quality",
-            "value": 30
-        }
-    ],
-    "width": 320
-}
-    """)
+    camera.setConfigJson(JSON_CONFING)
     camera.setFPS(90)
     inst.startAutomaticCapture(camera=camera, return_server=True)
 
@@ -330,27 +358,21 @@ def start_camera():
 
     return inst, camera
 
-
 def find_alignment_center(shapes):
-    dists = {}
-
-    for i in range(len(shapes)):
-        for j in range(i + 1, len(shapes)):
-            dists[distance(shapes[i][0], shapes[j][0])] = get_average_point(shapes[i][1][0],
-                                                                            shapes[j][1][0])
-    try:
-        return dists[min(dists.keys())]
-    except ValueError:
-        return None
-
+    max_area = 0
+    point = None
+    combinations = itertools.combinations(shapes, 2)
+    for combination in combinations:
+        print(combination[0].get_approx_area() + combination[1].get_approx_area())
+        if distance(combination[0].get_lowest_point(), combination[1].get_lowest_point()) > \
+            distance(combination[0].get_second_highest_point(), combination[1].get_second_highest_point()) \
+            and combination[0].get_approx_area() + combination[1].get_approx_area() > max_area:
+            max_area = combination[0].get_approx_area() + combination[1].get_approx_area()
+            point = combination[0].get_middle_point(combination[1])
+    return point
 
 def distance(point1: tuple, point2: tuple):
     return sqrt(pow(point1[0] - point2[0], 2) + pow(point1[1] - point2[1], 2))
-
-
-def get_average_point(point1, point2):
-    return (int(point1[0] + point2[0]) // 2,
-            int(point1[1] + point2[1]) // 2)
 
 
 def main():
@@ -358,7 +380,7 @@ def main():
 
     widgets = {}
 
-    setpoint = (VERTICAL_RES // 2, HORIZONTAL_RES // 2)
+
 
     sd = NetworkTables.getTable('Vision')
 
@@ -390,34 +412,36 @@ def main():
         drawing = np.zeros((HORIZONTAL_RES, VERTICAL_RES, 3), np.uint8)
 
         if len(pipeline.convex_hulls_output) != 0:
-
             for hull in pipeline.convex_hulls_output:
                 rect = cv2.minAreaRect(hull)
                 box = cv2.boxPoints(rect)
                 box = np.int0(box)
 
-                shapes.append((nsmallest(2, box, key=lambda x: x[1])[-1], rect))
-                
+                x, y, w, h = cv2.boundingRect(hull)
+                cv2.rectangle(drawing, (x,y), (x + w, y + h), (100, 10, 100), 5)
+
+
+                shapes.append(Shape(box, rect[0], rect[2], w, h))
                 cv2.drawContours(drawing, [box], 0, (0, 0, 255), 4)
 
-            for i in range(len(pipeline.convex_hulls_output)):
-                cv2.drawContours(
-                    drawing, pipeline.convex_hulls_output, i, (255, 0, 0), 3)
+                for i in range(len(pipeline.convex_hulls_output)):
+                    cv2.drawContours(
+                        drawing, pipeline.convex_hulls_output, i, (255, 0, 0), 3)
 
             if len(shapes) == 1:
-                if abs(shapes[0][1][2]) > 45:
-                    alignment_center = (VERTICAL_RES, int(shapes[0][1][0][1]))
+                if shapes[0].angle > 45:
+                    alignment_center = (VERTICAL_RES, shapes[0].center[1])
                 else:
-                    alignment_center = (0, int(shapes[0][1][0][1]))
+                    alignment_center = (0, shapes[0].center[1])
             else:
                 alignment_center = find_alignment_center(shapes)
 
             if alignment_center is not None:
 
-                cv2.circle(drawing, alignment_center, 5, (0, 255, 0), 5)
+                cv2.circle(drawing, tuple(map(int, alignment_center)), 5, (0, 255, 0), 5)
 
-                sd.putNumber('X Error', setpoint[0] - alignment_center[0])
-                sd.putNumber('Y Error', setpoint[1] - alignment_center[1])
+                sd.putNumber('X Error', SETPOINT[0] - alignment_center[0])
+                sd.putNumber('Y Error', SETPOINT[1] - alignment_center[1])
 
         outputStream.putFrame(drawing)
 

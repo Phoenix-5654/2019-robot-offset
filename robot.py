@@ -44,7 +44,7 @@ class MyRobot(MagicRobot):
     def teleopPeriodic(self):
 
         if self.controller.getStartButtonPressed():
-            self.auto_aligner.enable_x()
+            self.auto_aligner.enable()
 
         if not self.drivetrain.locked:
 
