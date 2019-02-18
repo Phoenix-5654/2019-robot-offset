@@ -25,11 +25,10 @@ class AutoAligner:
 
         self.x_enabled = False
 
-
         self.y_controller = PIDController(
             1, 0, 0, measurement_source=self.get_y_error)
 
-        self.y_controller.setInputRange(-160, 160)
+        self.y_controller.setInputRange(-120, 120)
         self.y_controller.setOutputRange(-1, 1)
         self.y_controller.setReference(0)
         self.y_controller.setPercentTolerance(0.01)
@@ -55,6 +54,7 @@ class AutoAligner:
     def enable(self):
         self.enable_x()
         self.enable_y()
+
     def reset(self):
         self.x_controller.reset()
         self.y_controller.reset()
@@ -62,6 +62,7 @@ class AutoAligner:
         self.y_enabled = False
         self.positioned = 0
         self.drivetrain.unlock()
+
     def execute(self):
 
         if self.x_enabled or self.y_enabled:
@@ -77,4 +78,3 @@ class AutoAligner:
 
             if self.positioned == self.CHECKS:
                 self.reset()
-

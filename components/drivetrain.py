@@ -8,7 +8,6 @@ class Drivetrain:
         self.tank_enabled = self.locked = False
         self.x = self.y = self.right = self.left = 0
 
-
     def move_x(self, x):
         self.x = x
 
@@ -18,7 +17,6 @@ class Drivetrain:
     def move(self, x, y):
         self.move_x(x)
         self.move_y(y)
-
 
     def tank_move(self, left, right):
         self.tank_enabled = True
