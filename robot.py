@@ -1,10 +1,12 @@
 import ctre
+import navx
 import wpilib
 import wpilib.drive
 from magicbot import MagicRobot
+from networktables import NetworkTables
 
-from components.drivetrain import Drivetrain
 from components.autoaligner import AutoAligner
+from components.drivetrain import Drivetrain
 
 
 class MyRobot(MagicRobot):
@@ -12,6 +14,8 @@ class MyRobot(MagicRobot):
     auto_aligner: AutoAligner
 
     def createObjects(self):
+
+        self.tab = NetworkTables.getTable('Navx')
 
         self.left_front_motor = ctre.WPI_TalonSRX(1)
         self.left_rear_motor = ctre.WPI_VictorSPX(2)
@@ -31,6 +35,9 @@ class MyRobot(MagicRobot):
             self.left, self.right
         )
 
+        self.navx = navx.AHRS.create_i2c()
+        self.navx.reset()
+
         self.right_joystick = wpilib.Joystick(0)
         self.left_joystick = wpilib.Joystick(1)
 
@@ -47,12 +54,21 @@ class MyRobot(MagicRobot):
         if self.controller.getStartButtonPressed():
             self.auto_aligner.enable()
 
+        if self.controller.getBackButtonPressed():
+            self.auto_aligner.reset()
+
+        if self.controller.getBButtonPressed():
+            self.navx.reset()
+
         if not self.drivetrain.locked:
 
             self.drivetrain.tank_move(
                 -self.left_joystick.getY(),
-                -self.right_joystick.getY()
+                -self.right_joystick.getY(),
+                True
             )
+
+        self.tab.putNumber('Yaw', self.navx.getYaw())
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 from heapq import nsmallest
 from math import sqrt, tan, radians
 import itertools
+import json
 
 import cv2
 import numpy as np
@@ -22,9 +23,9 @@ class GripPipeline:
         """initializes all values to presets or None if need to be set
         """
 
-        self.__hsv_threshold_hue = [46.942446043165475, 95.52901023890786]
+        self.__hsv_threshold_hue = [0.0, 180.0]
         self.__hsv_threshold_saturation = [0.0, 255.0]
-        self.__hsv_threshold_value = [84.84712230215827, 255.0]
+        self.__hsv_threshold_value = [183.45323741007192, 255.0]
 
         self.hsv_threshold_output = None
 
@@ -170,30 +171,9 @@ class GripPipeline:
 def start_camera():
     inst = CameraServer.getInstance()
     camera = UsbCamera('Hatch Panels', '/dev/video0')
-    camera.setConfigJson(
-        """
-    {
-    "fps": 90,
-    "height": 240,
-    "pixel format": "mjpeg",
-    "properties": [
-        {
-            "name": "brightness",
-            "value": 20
-        },
-        {
-            "name": "contrast",
-            "value": 50
-        },
-        {
-            "name": "saturation",
-            "value": 100
-        },
-    ],
-    "width": 320
-    }
-    """
-    )
+
+    with open("cam.json", encoding='utf-8') as cam_config:
+        camera.setConfigJson(json.dumps(cam_config.read()))
 
     camera.setFPS(90)
     inst.startAutomaticCapture(camera=camera)
@@ -211,16 +191,20 @@ class Shape:
         self.width = width
         self.height = height
 
-    def get_lowest_point(self):
+    @property
+    def lowest_point(self):
         return self.points[0]
 
-    def get_second_highest_point(self):
+    @property
+    def second_highest_point(self):
         return nsmallest(2, self.points, key=lambda x: x[1])[-1]
 
-    def get_approx_area(self):
+    @property
+    def approx_area(self):
         return self.width * self.height
 
-    def get_middle_point(self, shape):
+    @property
+    def middle_point(self, shape):
         return get_average_point(self.center, shape.center)
 
 
@@ -229,15 +213,15 @@ def find_alignment_center(shapes):
     point = None
     targets = None
     combinations = itertools.combinations(shapes, 2)
-    for combination in combinations:
-        if distance(combination[0].get_lowest_point(), combination[1].get_lowest_point()) > \
-                distance(combination[0].get_second_highest_point(), combination[1].get_second_highest_point()) \
-                and combination[0].get_approx_area() + combination[1].get_approx_area() > max_area:
-            max_area = combination[0].get_approx_area(
-            ) + combination[1].get_approx_area()
-            point = combination[0].get_middle_point(combination[1])
-            targets = (combination[0], combination[1])
+    for first, second in combinations:
+        if (distance(first.lowest_point, second.lowest_point)
+                > distance(first.second_highest_point, second.second_highest_point)
+                and first.approx_area + second.approx_area
+                > max_area):
 
+            max_area = first.approx_area + second.approx_area
+            point = first.get_middle_point(second)
+            targets = (first, second)
         return point, targets
 
 
@@ -320,20 +304,23 @@ def main():
                 sd.putNumber('X Error', setpoint[0] - alignment_center[0])
                 sd.putNumber('Y Error', setpoint[1] - alignment_center[1])
 
-                target_angle = (alignment_center[1] * 24.4) / 120
+                target_y_angle = abs((160 - alignment_center[1]) * 24.4) / 120
 
-                sd.putNumber('Target Y Angle', target_angle)
+                sd.putNumber(
+                    'X Angle', (abs(160 - alignment_center[0]) * 31.1) / 160)
+                sd.putNumber('Y Angle', target_y_angle)
 
-                sd.putNumber('Target Distance', (-11.5) / tan())
+                sd.putNumber(
+                    'Distance', 11.5 / tan(radians(target_y_angle + 15)))
 
             if targets is not None:
 
-                if targets[0].get_lowest_point()[0] < targets[1].get_lowest_point()[0]:
-                    sd.putNumber('Target Difference', targets[0].get_lowest_point(
-                    )[1] - targets[1].get_lowest_point()[1])
+                if targets[0].lowest_point[0] < targets[1].lowest_point[0]:
+                    sd.putNumber(
+                        'Target Difference', targets[0].lowest_point[1] - targets[1].lowest_point[1])
                 else:
-                    sd.putNumber('Target Difference', targets[1].get_lowest_point(
-                    )[1] - targets[0].get_lowest_point()[1])
+                    sd.putNumber(
+                        'Target Difference', targets[1].lowest_point[1] - targets[0].lowest_point[1])
 
         outputStream.putFrame(drawing)
 
