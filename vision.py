@@ -171,7 +171,7 @@ class GripPipeline:
         """
 
         self.__hsv_threshold_hue = [63.12949640287769, 98.60068259385666]
-        self.__hsv_threshold_saturation = [123.83093525179855, 255.0]
+        self.__hsv_threshold_saturation = [0, 255.0]
         self.__hsv_threshold_value = [75.67446043165468, 255.0]
 
         self.hsv_threshold_output = None
@@ -363,7 +363,6 @@ def find_alignment_center(shapes):
     point = None
     combinations = itertools.combinations(shapes, 2)
     for combination in combinations:
-        print(combination[0].get_approx_area() + combination[1].get_approx_area())
         if distance(combination[0].get_lowest_point(), combination[1].get_lowest_point()) > \
             distance(combination[0].get_second_highest_point(), combination[1].get_second_highest_point()) \
             and combination[0].get_approx_area() + combination[1].get_approx_area() > max_area:

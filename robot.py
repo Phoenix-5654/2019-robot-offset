@@ -2,6 +2,7 @@ import ctre
 import wpilib
 import wpilib.drive
 from magicbot import MagicRobot
+import navx
 
 from components.drivetrain import Drivetrain
 from components.autoaligner import AutoAligner
@@ -12,6 +13,8 @@ class MyRobot(MagicRobot):
     auto_aligner: AutoAligner
 
     def createObjects(self):
+
+        self.navx = navx.ahrs.AHRS.create_i2c()
 
         self.left_front_motor = ctre.WPI_TalonSRX(1)
         self.left_rear_motor = ctre.WPI_VictorSPX(2)
@@ -36,10 +39,10 @@ class MyRobot(MagicRobot):
 
         self.controller = wpilib.XboxController(2)
     def testInit(self):
-        self.auto_aligner.reset()
+        self.auto_aligner.reset(True)
 
     def teleopInit(self):
-        self.auto_aligner.reset()
+        self.auto_aligner.reset(True)
 
     def teleopPeriodic(self):
 
@@ -47,7 +50,6 @@ class MyRobot(MagicRobot):
             self.auto_aligner.enable()
 
         if not self.drivetrain.locked:
-
             self.drivetrain.tank_move(-self.left_joystick.getY(),
                                       -self.right_joystick.getY())
 
