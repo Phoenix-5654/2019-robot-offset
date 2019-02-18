@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from heapq import nsmallest
-from math import sqrt
+from math import sqrt, radians, tan
 import itertools
 
 
@@ -29,7 +29,7 @@ JSON_CONFING = """
         },
         {
             "name": "brightness",
-            "value": 35
+            "value": 10
         },
         {
             "name": "raw_contrast",
@@ -37,7 +37,7 @@ JSON_CONFING = """
         },
         {
             "name": "contrast",
-            "value": 30
+            "value": 100
         },
         {
             "name": "raw_saturation",
@@ -170,9 +170,9 @@ class GripPipeline:
         """initializes all values to presets or None if need to be set
         """
 
-        self.__hsv_threshold_hue = [63.12949640287769, 98.60068259385666]
-        self.__hsv_threshold_saturation = [0, 255.0]
-        self.__hsv_threshold_value = [75.67446043165468, 255.0]
+        self.__hsv_threshold_hue = [0.0, 180.0]
+        self.__hsv_threshold_saturation = [0.0, 255.0]
+        self.__hsv_threshold_value = [183.45323741007192, 255.0]
 
         self.hsv_threshold_output = None
 
@@ -441,6 +441,13 @@ def main():
 
                 sd.putNumber('X Error', SETPOINT[0] - alignment_center[0])
                 sd.putNumber('Y Error', SETPOINT[1] - alignment_center[1])
+
+                target_y_angle = (abs(160 - alignment_center[1]) * 31.1) / 160
+
+                sd.putNumber('X Angle', (abs(160 - alignment_center[0]) * 31.1) / 160)
+                sd.putNumber('Y Angle', target_y_angle)
+
+                sd.putNumber('Distance', 11.5 / tan(radians(target_y_angle + 15)))
 
         outputStream.putFrame(drawing)
 
