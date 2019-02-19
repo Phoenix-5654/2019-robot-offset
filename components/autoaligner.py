@@ -1,6 +1,6 @@
 from networktables import NetworkTables
 
-from wpilib_controller import PIDController
+from components.wpilib_controller import PIDController
 
 from components.drivetrain import Drivetrain
 
