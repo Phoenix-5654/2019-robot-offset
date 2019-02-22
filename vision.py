@@ -12,7 +12,9 @@ from cscore import CameraServer, UsbCamera, VideoSource
 
 HORIZONTAL_RES = 240
 VERTICAL_RES = 320
+ERROR_VALUE = 5000
 
+SET_POINT = (VERTICAL_RES // 2, HORIZONTAL_RES // 2 + 90)
 
 class GripPipeline:
     """
@@ -23,9 +25,9 @@ class GripPipeline:
         """initializes all values to presets or None if need to be set
         """
 
-        self.__hsv_threshold_hue = [0.0, 180.0]
-        self.__hsv_threshold_saturation = [0.0, 255.0]
-        self.__hsv_threshold_value = [183.45323741007192, 255.0]
+        self.__hsv_threshold_hue = [63, 100.0]
+        self.__hsv_threshold_saturation = [124, 255.0]
+        self.__hsv_threshold_value = [72, 255.0]
 
         self.hsv_threshold_output = None
 
@@ -172,10 +174,33 @@ def start_camera():
     inst = CameraServer.getInstance()
     camera = UsbCamera('Hatch Panels', '/dev/video0')
 
-    with open("cam.json", encoding='utf-8') as cam_config:
-        camera.setConfigJson(json.dumps(cam_config.read()))
-
+    # with open("cam.json", encoding='utf-8') as cam_config:
+    #     camera.setConfigJson(json.dumps(cam_config.read()))
+    camera.setResolution(VERTICAL_RES, HORIZONTAL_RES)
     camera.setFPS(90)
+    camera.setBrightness(10)
+    camera.setConfigJson("""
+    {
+    "fps": 90,
+    "height": 240,
+    "pixel format": "mjpeg",
+    "properties": [
+        {
+            "name": "brightness",
+            "value": 10
+        },
+        {
+            "name": "contrast",
+            "value": 100
+        },
+        {
+            "name": "saturation",
+            "value": 100
+        }
+    ],
+    "width": 320
+}
+    """)
     inst.startAutomaticCapture(camera=camera)
 
     camera.setConnectionStrategy(VideoSource.ConnectionStrategy.kKeepOpen)
@@ -200,29 +225,36 @@ class Shape:
         return nsmallest(2, self.points, key=lambda x: x[1])[-1]
 
     @property
+    def highest_point(self):
+        return min(self.points, key=lambda x: x[1])
+
+    @property
     def approx_area(self):
         return self.width * self.height
 
-    @property
-    def middle_point(self, shape):
+    def get_middle_point(self, shape):
         return get_average_point(self.center, shape.center)
 
 
-def find_alignment_center(shapes):
-    max_area = 0
+def find_alignment_center(shapes, k):
+    min_val = 100000000
     point = None
     targets = None
     combinations = itertools.combinations(shapes, 2)
-    for first, second in combinations:
+    for combination in combinations:
+        first = combination[0]
+        second = combination[1]
         if (distance(first.lowest_point, second.lowest_point)
-                > distance(first.second_highest_point, second.second_highest_point)
-                and first.approx_area + second.approx_area
-                > max_area):
+            > distance(first.second_highest_point, second.second_highest_point)):
+            val = ((distance(first.lowest_point, second.lowest_point) +
+                   distance(first.second_highest_point, second.second_highest_point))
+                   / (k * (first.approx_area + second.approx_area)))
 
-            max_area = first.approx_area + second.approx_area
-            point = first.get_middle_point(second)
-            targets = (first, second)
-        return point, targets
+            if (val < min_val):
+                min_val = val
+                point = first.get_middle_point(second)
+                targets = (first, second)
+    return point, targets
 
 
 def distance(point1: tuple, point2: tuple):
@@ -237,9 +269,9 @@ def get_average_point(point1, point2):
 def main():
     NetworkTables.initialize(server='10.56.54.2')
 
-    setpoint = (VERTICAL_RES // 2, HORIZONTAL_RES // 2)
 
     sd = NetworkTables.getTable('Vision')
+    sd.putNumber('k', 1e-09)
 
     inst, camera = start_camera()
 
@@ -253,6 +285,7 @@ def main():
     img = np.zeros(shape=(VERTICAL_RES, HORIZONTAL_RES, 3), dtype=np.uint8)
 
     while True:
+        k = sd.getNumber("k", 10)
 
         shapes = []
 
@@ -283,6 +316,8 @@ def main():
                     (Shape(box, rect[0], rect[2], w, h)))
 
                 cv2.drawContours(drawing, [box], 0, (0, 0, 255), 4)
+                cv2.circle(drawing, tuple(map(int, shapes[-1].second_highest_point)), 5, (100, 60, 200), 5)
+                cv2.circle(drawing, tuple(map(int, shapes[-1].lowest_point)), 5, (200, 30, 100), 5)
 
             for i in range(len(pipeline.convex_hulls_output)):
                 cv2.drawContours(
@@ -294,16 +329,15 @@ def main():
                 else:
                     alignment_center = (0, shapes[0].center[1])
             else:
-                alignment_center, targets = find_alignment_center(shapes)
+                alignment_center, targets = find_alignment_center(shapes, k)
 
             if alignment_center is not None:
 
                 cv2.circle(drawing, tuple(
                     map(int, alignment_center)), 5, (0, 255, 0), 5)
 
-                sd.putNumber('X Error', setpoint[0] - alignment_center[0])
-                sd.putNumber('Y Error', setpoint[1] - alignment_center[1])
-
+                sd.putNumber('X Error', SET_POINT[0] - alignment_center[0])
+                sd.putNumber('Y Error', SET_POINT[1] - alignment_center[1])
                 target_y_angle = abs((160 - alignment_center[1]) * 24.4) / 120
 
                 sd.putNumber(
@@ -312,6 +346,8 @@ def main():
 
                 sd.putNumber(
                     'Distance', 11.5 / tan(radians(target_y_angle + 15)))
+            else:
+                sd.putNumber("X Error", ERROR_VALUE)
 
             if targets is not None:
 
@@ -321,7 +357,35 @@ def main():
                 else:
                     sd.putNumber(
                         'Target Difference', targets[1].lowest_point[1] - targets[0].lowest_point[1])
+                sd.putNumber("Dist Up",
+                             abs(targets[0].highest_point[0]
+                                            - targets[1].highest_point[0]))
+                sd.putNumber("Dist Second highest",
+                             abs(targets[0].second_highest_point[0]
+                                 - targets[1].second_highest_point[0]))
+                sd.putNumber("Dist Down",
+                             abs(targets[0].lowest_point[0]
+                                              - targets[1].lowest_point[0]))
+                sum1 = (abs(targets[0].second_highest_point[0]
+                                 - targets[1].second_highest_point[0])
+                             + abs(targets[0].lowest_point[0]
+                                   - targets[1].lowest_point[0]))
+                sd.putNumber("SUM 1", sum1)
+                sum2 = (abs(targets[0].highest_point[1] - targets[0].lowest_point[1])
+                             + abs(targets[1].highest_point[1] - targets[1].highest_point[1]))
+                sd.putNumber("SUM 2", sum2)
+                sd.putNumber("FRACTION 1", sum1 / sum2)
+                sd.putNumber("FRACTION 2", sum2 / sum1)
+                sd.putNumber("FRACTION 3", abs(targets[0].second_highest_point[0]
+                                 - targets[1].second_highest_point[0]) / sum2)
+                sd.putNumber("Multiply 1", sum1 * sum2)
+                sd.putNumber("Multiply 2",  abs(targets[0].second_highest_point[0]
+                                 - targets[1].second_highest_point[0]) * sum2)
+                sd.putNumber("approx yaw", ((sum2 / sum1) - 0.3587) / 0.0053)
 
+
+        else:
+            sd.putNumber("X Error", ERROR_VALUE)
         outputStream.putFrame(drawing)
 
 
