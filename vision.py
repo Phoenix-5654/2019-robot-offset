@@ -12,9 +12,10 @@ from cscore import CameraServer, UsbCamera, VideoSource
 
 HORIZONTAL_RES = 240
 VERTICAL_RES = 320
+FPS = 90
 ERROR_VALUE = 5000
 
-SET_POINT = (VERTICAL_RES // 2, HORIZONTAL_RES // 2 + 90)
+SET_POINT = (VERTICAL_RES // 2 - 42, HORIZONTAL_RES // 2 + 90)
 
 class GripPipeline:
     """
@@ -25,9 +26,9 @@ class GripPipeline:
         """initializes all values to presets or None if need to be set
         """
 
-        self.__hsv_threshold_hue = [63, 100.0]
-        self.__hsv_threshold_saturation = [124, 255.0]
-        self.__hsv_threshold_value = [72, 255.0]
+        self.__hsv_threshold_hue = [84, 180.0]
+        self.__hsv_threshold_saturation = [0, 255.0]
+        self.__hsv_threshold_value = [151, 255.0]
 
         self.hsv_threshold_output = None
 
@@ -177,12 +178,12 @@ def start_camera():
     # with open("cam.json", encoding='utf-8') as cam_config:
     #     camera.setConfigJson(json.dumps(cam_config.read()))
     camera.setResolution(VERTICAL_RES, HORIZONTAL_RES)
-    camera.setFPS(90)
+    camera.setFPS(FPS)
     camera.setBrightness(10)
     camera.setConfigJson("""
     {
-    "fps": 90,
-    "height": 240,
+    "fps": """ + str(FPS) + """
+    "height": """ + str(HORIZONTAL_RES) + """,
     "pixel format": "mjpeg",
     "properties": [
         {
@@ -198,7 +199,7 @@ def start_camera():
             "value": 100
         }
     ],
-    "width": 320
+    "width": """ + str(VERTICAL_RES) + """"
 }
     """)
     inst.startAutomaticCapture(camera=camera)
@@ -245,7 +246,8 @@ def find_alignment_center(shapes, k):
         first = combination[0]
         second = combination[1]
         if (distance(first.lowest_point, second.lowest_point)
-            > distance(first.second_highest_point, second.second_highest_point)):
+            > distance(first.second_highest_point, second.second_highest_point))\
+                and first.angle > 75 and second.angle < 25:
             val = ((distance(first.lowest_point, second.lowest_point) +
                    distance(first.second_highest_point, second.second_highest_point))
                    / (k * (first.approx_area + second.approx_area)))
@@ -262,13 +264,13 @@ def distance(point1: tuple, point2: tuple):
 
 
 def get_average_point(point1, point2):
-    return (int(point1[0] + point2[0]) // 2,
-            int(point1[1] + point2[1]) // 2)
+    return (((point1[0] + point2[0]) / 2,
+            (point1[1] + point2[1]) / 2))
 
 
 def main():
     NetworkTables.initialize(server='10.56.54.2')
-
+    NetworkTables.setUpdateRate(0.015)
 
     sd = NetworkTables.getTable('Vision')
     sd.putNumber('k', 1e-09)
@@ -324,6 +326,7 @@ def main():
                     drawing, pipeline.convex_hulls_output, i, (255, 0, 0), 3)
 
             if len(shapes) == 1:
+                # alignment_center = None
                 if shapes[0].angle > 45:
                     alignment_center = (VERTICAL_RES, shapes[0].center[1])
                 else:
@@ -347,7 +350,7 @@ def main():
                 sd.putNumber(
                     'Distance', 11.5 / tan(radians(target_y_angle + 15)))
             else:
-                sd.putNumber("X Error", ERROR_VALUE)
+                    sd.putNumber("X Error", ERROR_VALUE)
 
             if targets is not None:
 

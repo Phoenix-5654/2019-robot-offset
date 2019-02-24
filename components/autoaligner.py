@@ -8,6 +8,8 @@ from magicbot import tunable
 
 import navx
 
+HORIZONTAL_RES = 240
+VERTICAL_RES = 320
 
 class AutoAligner:
 
@@ -28,7 +30,7 @@ class AutoAligner:
     def setup(self):
 
         self.navx_controller = PIDController(
-            0.025, 0.01, 0, measurement_source=self.get_navx_error)
+            0.025, 0.04, 0, measurement_source=self.get_navx_error)
 
         self.navx_controller.setInputRange(-180, 180)
         self.navx_controller.setOutputRange(-self.MAX_SPEED_NAVX,
@@ -37,12 +39,12 @@ class AutoAligner:
         self.navx_controller.setAbsoluteTolerance(3.5)
 
         self.x_controller = PIDController(
-            0.1, 0, 0, measurement_source=self.get_x_error)
+            0.005, 0, 0, measurement_source=self.get_x_error)
 
         self.x_controller.setInputRange(-160, 160)
-        self.x_controller.setOutputRange(-self.MAX_SPEED_STRIGHT,
-                                         self.MAX_SPEED_STRIGHT)
-        self.x_controller.setPercentTolerance(0.01)
+        self.x_controller.setOutputRange(-0.2,
+                                         0.2)
+        self.x_controller.setAbsoluteTolerance(10)
 
         self.reset()
 
@@ -89,26 +91,32 @@ class AutoAligner:
                 self.positioned = 0
 
         if self.state == 2:
-            if self.get_x_error() == self.ERROR:
+            x_error = self.get_x_error()
+            if x_error == self.ERROR:
                 self.drivetrain.move(
                     0,
                     self.Y_SPEED
+                )
+            elif x_error == VERTICAL_RES or x_error == 0:
+                self.drivetrain.move(
+                    0,
+                    0.15
                 )
             else:
                 x_output = self.x_controller.update()
                 self.vision.putNumber("XPID Output", x_output)
 
-                self.drivetrain.move(
-                    0,
+                self.drivetrain.tank_move(
+                    x_output,
                     x_output
                 )
 
-                if self.navx_controller.atReference():
+                if self.x_controller.atReference():
                     self.positioned += 1
                 else:
                     self.positioned = 0
 
-                if self.positioned == self.CHECKS:
+                if self.positioned == 5:
                     self.state += 1
                     self.navx_controller.setReference(-90)
                     self.positioned = 0

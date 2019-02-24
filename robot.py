@@ -27,6 +27,7 @@ class MyRobot(MagicRobot):
     LEFT_CONTROLLER_HAND = wpilib.XboxController.Hand.kLeft
 
     def createObjects(self):
+        NetworkTables.initialize()
 
         wpilib.CameraServer.launch()
 
@@ -38,8 +39,8 @@ class MyRobot(MagicRobot):
         self.right_front_motor = ctre.WPI_TalonSRX(3)
         self.right_rear_motor = ctre.WPI_VictorSPX(4)
 
-        self.grippers_left_motor = ctre.WPI_VictorSPX(8)
-        self.grippers_right_motor = ctre.WPI_VictorSPX(7)
+        self.grippers_left_motor = ctre.WPI_VictorSPX(6)
+        self.grippers_right_motor = ctre.WPI_VictorSPX(9)
 
         self.left = wpilib.SpeedControllerGroup(
             self.left_front_motor, self.left_rear_motor
@@ -55,9 +56,9 @@ class MyRobot(MagicRobot):
 
         self.hatch_panel_piston_solenoid = wpilib.DoubleSolenoid(1, 0)
         self.gripper_piston_solenoid = wpilib.DoubleSolenoid(4, 6)
-        self.panel_mechanism_piston_solenoid = wpilib.DoubleSolenoid(2, 3)
+        self.panel_mechanism_piston_solenoid = wpilib.DoubleSolenoid(2, 7)
 
-        self.first_hatch_panel_piston_solenoid = wpilib.Solenoid(7)
+        self.first_hatch_panel_piston_solenoid = wpilib.Solenoid(3)
 
         self.ramp_motor = ctre.WPI_TalonSRX(6)
 
