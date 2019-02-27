@@ -135,6 +135,7 @@ class MyRobot(MagicRobot):
                 )
 
         self.tab.putNumber('Yaw', self.navx.getYaw())
+        self.tab.putBoolean("Is vision enabled", self.auto_aligner.enabled)
 
 
 if __name__ == "__main__":

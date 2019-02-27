@@ -13,9 +13,9 @@ from cscore import CameraServer, UsbCamera, VideoSource
 HORIZONTAL_RES = 240
 VERTICAL_RES = 320
 FPS = 90
-ERROR_VALUE = 5000
+ERROR_VALUE = 0
 
-SET_POINT = (VERTICAL_RES // 2 - 42, HORIZONTAL_RES // 2 + 90)
+SET_POINT = (VERTICAL_RES // 2 + 28, HORIZONTAL_RES // 2 + 43)
 
 class GripPipeline:
     """
@@ -246,8 +246,7 @@ def find_alignment_center(shapes, k):
         first = combination[0]
         second = combination[1]
         if (distance(first.lowest_point, second.lowest_point)
-            > distance(first.second_highest_point, second.second_highest_point))\
-                and first.angle > 75 and second.angle < 25:
+            > distance(first.second_highest_point, second.second_highest_point)):
             val = ((distance(first.lowest_point, second.lowest_point) +
                    distance(first.second_highest_point, second.second_highest_point))
                    / (k * (first.approx_area + second.approx_area)))
