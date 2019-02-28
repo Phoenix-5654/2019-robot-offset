@@ -21,11 +21,10 @@ class PathGenerator:
     # right_motor: ctre.WPI_TalonSRX
     # navx: navx.ahrs.AHRS
 
-    def __init__(self, points: list,
+    def __init__(self,
                  left_motor: ctre.WPI_TalonSRX,
                  right_motor: ctre.WPI_TalonSRX,
-                 navx: navx.ahrs.AHRS,
-                 file_name="trajectory.pickle"):
+                 navx: navx.ahrs.AHRS):
 
         self.right_motor = right_motor
         self.left_motor = left_motor
@@ -35,27 +34,16 @@ class PathGenerator:
         self.left_motor.setQuadraturePosition(0, self.TIMEOUT_MS)
         self.navx.reset()
 
-        pickle_file = os.path.join(os.path.dirname(__file__), "../PathWeaver/output/right_auto.")
-        # if wpilib.RobotBase.isSimulation():
-        #     info, trajectory = pf.generate(
-        #         points, pf.FIT_HERMITE_CUBIC, pf.SAMPLES_HIGH,
-        #         dt=self.CYCLE_TIME,
-        #         max_velocity=self.MAX_VELOCITY,
-        #         max_acceleration=self.MAX_ACCEL,
-        #         max_jerk=self.MAX_JERK
-        #     )
-        #     with open(pickle_file, 'wb') as fp:
-        #         pickle.dump(trajectory, fp)
-        # else:
-        #     with open(pickle_file, 'rb') as fp:
-        #         trajectory = pickle.load(fp)
-        left_trajectory = pf.deserialize_csv(pickle_file + "left.pf1.csv")
-        right_trajectory = pf.deserialize_csv(pickle_file+ "right.pf1.csv")
+        file = os.path.join(os.path.dirname(__file__),
+                            "../PathWeaver/output/right_auto.")
+
+        self.left_trajectory = pf.deserialize_csv(file + "left.pf1.csv")
+        self.right_trajectory = pf.deserialize_csv(file + "right.pf1.csv")
 
         self.left_follower = pf.followers.EncoderFollower(
-            left_trajectory)
+            self.left_trajectory)
         self.right_follower = pf.followers.EncoderFollower(
-            right_trajectory)
+            self.right_trajectory)
 
         self.left_follower.configureEncoder(
             self.left_motor.getQuadraturePosition(),
@@ -81,7 +69,6 @@ class PathGenerator:
 
     @property
     def turn(self):
-        return 0
         gyro_heading = self.navx.getYaw()
         desired_heading = pf.r2d(self.left_follower.getHeading())
 
@@ -92,4 +79,5 @@ class PathGenerator:
 
     @property
     def is_finished(self):
-        return self.left_follower.isFinished() and self.right_follower.isFinished()
+        return self.left_follower.isFinished() \
+            and self.right_follower.isFinished()
