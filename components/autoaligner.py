@@ -26,8 +26,8 @@ class AutoAligner:
         self.y_controller = PIDController(
             1, 0, 0, measurement_source=self.get_y_error)
 
-        self.y_controller.setInputRange(-self.HORIZONTAL_RES // 2
-                                        , self.HORIZONTAL_RES // 2)
+        self.y_controller.setInputRange(-self.HORIZONTAL_RES //
+                                        2, self.HORIZONTAL_RES // 2)
         self.y_controller.setOutputRange(-self.MAX_Y_SPEED,
                                          self.MAX_Y_SPEED)
         self.y_controller.setAbsoluteTolerance(10)
