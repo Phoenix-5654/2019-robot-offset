@@ -29,6 +29,7 @@ class MyRobot(MagicRobot):
     LEFT_CONTROLLER_HAND = wpilib.XboxController.Hand.kLeft
 
     def createObjects(self):
+
         NetworkTables.initialize()
 
         wpilib.CameraServer.launch()
@@ -140,6 +141,8 @@ class MyRobot(MagicRobot):
 
         self.tab.putNumber('Yaw', self.navx.getYaw())
         self.tab.putBoolean("Is vision enabled", self.auto_aligner.enabled)
+        self.tab.putNumber("Right Dist", (self.right_front_motor.getQuadraturePosition() / 1024) * 6 * 2.54)
+        self.tab.putNumber("Left Dist", (self.left_front_motor.getQuadraturePosition() / 1024) * 6 * 2.54)
 
 
 if __name__ == "__main__":

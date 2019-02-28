@@ -10,12 +10,12 @@ import wpilib
 class PathGenerator:
     RESOLUTION = 1024
     WHEEL_DIAMETER = 0.1524
-    MAX_ACCEL = 2.5
+    MAX_ACCEL = 2
     MAX_VELOCITY = 1.5
     MAX_JERK = 60
     CYCLE_TIME = 0.02  # 20ms
     TIMEOUT_MS = 10
-    WHEELBASE_WIDTH = 0.5
+    WHEELBASE_WIDTH = 0.69
 
     # left_motor: ctre.WPI_TalonSRX
     # right_motor: ctre.WPI_TalonSRX
@@ -33,28 +33,29 @@ class PathGenerator:
 
         self.right_motor.setQuadraturePosition(0, self.TIMEOUT_MS)
         self.left_motor.setQuadraturePosition(0, self.TIMEOUT_MS)
+        self.navx.reset()
 
-        pickle_file = os.path.join(os.path.dirname(__file__), file_name)
-        if wpilib.RobotBase.isSimulation():
-            info, trajectory = pf.generate(
-                points, pf.FIT_HERMITE_CUBIC, pf.SAMPLES_HIGH,
-                dt=self.CYCLE_TIME,
-                max_velocity=self.MAX_VELOCITY,
-                max_acceleration=self.MAX_ACCEL,
-                max_jerk=self.MAX_JERK
-            )
-            with open(pickle_file, 'wb') as fp:
-                pickle.dump(trajectory, fp)
-        else:
-            with open(pickle_file, 'rb') as fp:
-                trajectory = pickle.load(fp)
-
-        modifier = pf.modifiers.TankModifier(trajectory).modify(self.WHEELBASE_WIDTH)
+        pickle_file = os.path.join(os.path.dirname(__file__), "../PathWeaver/output/right_auto.")
+        # if wpilib.RobotBase.isSimulation():
+        #     info, trajectory = pf.generate(
+        #         points, pf.FIT_HERMITE_CUBIC, pf.SAMPLES_HIGH,
+        #         dt=self.CYCLE_TIME,
+        #         max_velocity=self.MAX_VELOCITY,
+        #         max_acceleration=self.MAX_ACCEL,
+        #         max_jerk=self.MAX_JERK
+        #     )
+        #     with open(pickle_file, 'wb') as fp:
+        #         pickle.dump(trajectory, fp)
+        # else:
+        #     with open(pickle_file, 'rb') as fp:
+        #         trajectory = pickle.load(fp)
+        left_trajectory = pf.deserialize_csv(pickle_file + "left.pf1.csv")
+        right_trajectory = pf.deserialize_csv(pickle_file+ "right.pf1.csv")
 
         self.left_follower = pf.followers.EncoderFollower(
-            modifier.getLeftTrajectory())
+            left_trajectory)
         self.right_follower = pf.followers.EncoderFollower(
-            modifier.getRightTrajectory())
+            right_trajectory)
 
         self.left_follower.configureEncoder(
             self.left_motor.getQuadraturePosition(),
@@ -80,6 +81,7 @@ class PathGenerator:
 
     @property
     def turn(self):
+        return 0
         gyro_heading = self.navx.getYaw()
         desired_heading = pf.r2d(self.left_follower.getHeading())
 

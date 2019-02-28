@@ -17,7 +17,12 @@ class RightAuto(AutonomousStateMachine):
 
     MODE_NAME = "Right Auto"
     DEFAULT = True
-    points = [pf.Waypoint(0, 0, 0), pf.Waypoint(5, 9, math.radians(-45.0))]
+    # points = [pf.Waypoint(2, 5.25, 0),
+    #           pf.Waypoint(3.75, 5.25, 0),
+    #           pf.Waypoint(5.815, 5.9, 0),
+    #           pf.Waypoint(6.9, 4.95, math.radians(90))]
+    points = [pf.Waypoint(0, 0, 0),
+              pf.Waypoint(3, 0, 0)]
 
     def setup(self):
         self.path_generator = PathGenerator(points=self.points,
@@ -28,6 +33,10 @@ class RightAuto(AutonomousStateMachine):
 
     @state(first=True, must_finish=True)
     def execute_auto(self):
+        self.auto_right_motor.setQuadraturePosition(0, 10)
+        self.auto_left_motor.setQuadraturePosition(0, 10)
+        self.navx.reset()
+
         turn = self.path_generator.turn
         self.drivetrain.tank_move(self.path_generator.left_output
                                   + turn,

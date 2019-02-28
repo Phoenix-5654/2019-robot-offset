@@ -181,8 +181,8 @@ def start_camera():
     camera.setFPS(FPS)
     camera.setBrightness(10)
     camera.setConfigJson("""
-    {
-    "fps": """ + str(FPS) + """
+{
+    "fps": """ + str(FPS) + """,
     "height": """ + str(HORIZONTAL_RES) + """,
     "pixel format": "mjpeg",
     "properties": [
@@ -199,7 +199,7 @@ def start_camera():
             "value": 100
         }
     ],
-    "width": """ + str(VERTICAL_RES) + """"
+    "width": """ + str(VERTICAL_RES) + """
 }
     """)
     inst.startAutomaticCapture(camera=camera)
@@ -275,6 +275,7 @@ def main():
     sd.putNumber('k', 1e-09)
 
     inst, camera = start_camera()
+    start_
 
     pipeline = GripPipeline()
 
