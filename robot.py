@@ -12,6 +12,8 @@ from components.piston import Piston
 from components.motor import Motor, MotorConfig
 from components.single_solenoid_piston import SingleSolenoidPiston
 
+from autonomous.right_auto import RightAuto
+
 
 class MyRobot(MagicRobot):
     drivetrain: Drivetrain
@@ -33,11 +35,12 @@ class MyRobot(MagicRobot):
 
         self.tab = NetworkTables.getTable('Navx')
 
-        self.left_front_motor = ctre.WPI_TalonSRX(1)
+        self.auto_left_motor = self.left_front_motor = ctre.WPI_TalonSRX(1)
         self.left_rear_motor = ctre.WPI_VictorSPX(2)
 
-        self.right_front_motor = ctre.WPI_TalonSRX(3)
+        self.auto_right_motor = self.right_front_motor = ctre.WPI_TalonSRX(3)
         self.right_rear_motor = ctre.WPI_VictorSPX(4)
+
 
         self.grippers_left_motor = ctre.WPI_VictorSPX(6)
         self.grippers_right_motor = ctre.WPI_VictorSPX(9)
@@ -78,6 +81,7 @@ class MyRobot(MagicRobot):
         self.left_joystick = wpilib.Joystick(1)
 
         self.controller = wpilib.XboxController(2)
+
 
     def testInit(self):
         self.auto_aligner.reset()
