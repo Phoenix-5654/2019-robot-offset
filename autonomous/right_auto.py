@@ -100,19 +100,18 @@ class RightAuto(AutonomousStateMachine):
     def get_right_velocity(self):
         dist = ((self.auto_right_motor.getQuadraturePosition()
                 / self.RESOLUTION) * self.WHEEL_DIAMETER)
-        vel = (dist - self.last_right_encoder_value) / 0.02
-        self.last_left_encoder_value = dist
-        return vel
+        self.right_vel = (dist - self.last_right_encoder_value) / 0.02
+        self.last_right_encoder_value = dist
+        return self.right_vel
 
-    @feedback
     def get_left_velocity(self):
         dist = ((self.auto_left_motor.getQuadraturePosition()
                 / self.RESOLUTION) * self.WHEEL_DIAMETER)
-        vel = (dist - self.last_left_encoder_value) / 0.02
-        self.last_left_encoder_value = dist
-        return vel
+        self.left_vel = (dist - self.last_left_encoder_value) / 0.02
 
-    @feedback
+        self.last_left_encoder_value = dist
+        return self.left_vel
+
     def get_angular_velocity(self):
         return self.navx.getRate()
 
@@ -124,22 +123,33 @@ class RightAuto(AutonomousStateMachine):
         self.counter = 0
         self.last_right_encoder_value = 0
         self.last_left_encoder_value = 0
+
+        self.left_encoder_controller .setOutputRange(-self.MAX_LINEAR_SPEED,
+                                         self.MAX_LINEAR_SPEED)
+
+        self.right_encoder_controller .setOutputRange(-self.MAX_LINEAR_SPEED,
+                                         self.MAX_LINEAR_SPEED)
+        self.gyro_controller.setOutputRange(-self.MAX_ANGULAR_SPEED,
+                                                     self.MAX_ANGULAR_SPEED)
         self.next_state("execute_auto")
+
+
+
 
     @state(must_finish=True)
     def execute_auto(self):
-        self.printer()
         self.left_encoder_controller.setReference(self.left_velocity[self.counter])
-        left_output = self.left_encoder_controller.update()
+        self.left_output = self.left_encoder_controller.update()
         self.right_encoder_controller.setReference(self.right_velocity[self.counter])
-        right_output = self.right_encoder_controller.update()
+        self.right_output = self.right_encoder_controller.update()
         self.gyro_controller.setReference(self.angular_velocity[self.counter])
-        gyro_output = self.gyro_controller.update()
+        self.gyro_output = self.gyro_controller.update()
 
+        self.printer()
         self.counter += 1
 
-        self.drivetrain.tank_move(left_output + gyro_output,
-                                  right_output - gyro_output)
+        self.drivetrain.tank_move(self.left_output + self.gyro_output,
+                                  self.right_output - self.gyro_output)
 
         if self.counter == len(self.angular_velocity):
             self.done()
@@ -150,3 +160,9 @@ class RightAuto(AutonomousStateMachine):
         self.tab.putNumber("left vel diff", self.get_left_velocity())
         self.tab.putNumber("angular vel diff", self.get_angular_velocity())
         self.tab.putNumber("angular vel", self.navx.getRate())
+        self.tab.putNumber("right vel", self.right_vel)
+        self.tab.putNumber("left vel", self.left_vel)
+        self.tab.putNumber("leftPID output", self.left_output)
+        self.tab.putNumber("rightPID output", self.right_output)
+        self.tab.putNumber("gyroPID output", self.gyro_output)
+
