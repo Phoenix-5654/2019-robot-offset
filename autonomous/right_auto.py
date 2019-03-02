@@ -44,29 +44,23 @@ class RightAuto(AutonomousStateMachine):
                 os.path.join(os.path.dirname(__file__)
                     , "../auto_right_right_Jaci.csv"), "r") as f:
             reader = csv.DictReader(f)
-            self.right_velocity = []
-            self.angular_velocity = [0]
+            self.right_position = []
+            self.heading = []
             for row in reader:  # read a row as {column1: value1, column2: value2,...}
-                self.right_velocity.append(float(row["velocity"]))
-                self.angular_velocity.append(math.degrees(float(row["heading"])))
+                self.right_position.append(float(row["position"]))
+                self.heading.append(math.degrees(float(row["heading"])))
 
-        for i in range(len(self.angular_velocity)):
-            if i == 0:
-                continue
-            self.angular_velocity[i - 1] = (self.angular_velocity[i]
-                                           - self.angular_velocity[i - 1]) / 0.02
-
-        self.angular_velocity.pop()
+        self.heading.pop()
         with open(
                 os.path.join(os.path.dirname(__file__)
                     , "../auto_right_left_Jaci.csv"), "r") as f:
             reader = csv.DictReader(f)
-            self.left_velocity = []
+            self.left_position = []
             for row in reader:
-                self.left_velocity.append(float(row["velocity"]))
+                self.left_position.append(float(row["position"]))
 
         self.right_encoder_controller = PIDController(
-            1, 0, 0, measurement_source=self.get_right_velocity)
+            1, 0, 0, measurement_source=self.get_right)
 
         self.right_encoder_controller.setInputRange(-2.5, 2.5)
         self.right_encoder_controller.setOutputRange(-self.MAX_LINEAR_SPEED,
@@ -75,7 +69,7 @@ class RightAuto(AutonomousStateMachine):
         self.right_encoder_controller.setName("Right encoder controller")
 
         self.left_encoder_controller = PIDController(
-            1, 0, 0, measurement_source=self.get_left_velocity)
+            1, 0, 0, measurement_source=self.get_left)
 
         self.left_encoder_controller .setInputRange(-2.5, 2.5)
         self.left_encoder_controller .setOutputRange(-self.MAX_LINEAR_SPEED,
@@ -84,36 +78,32 @@ class RightAuto(AutonomousStateMachine):
         self.left_encoder_controller .setName("Left encoder controller")
 
         self.gyro_controller = PIDController(
-            1, 0, 0, measurement_source=self.get_angular_velocity)
+            1, 0, 0, measurement_source=self.get_yaw)
 
-        self.gyro_controller .setInputRange(-90, 90)
+        self.gyro_controller .setInputRange(-180, 180)
         self.gyro_controller.setOutputRange(-self.MAX_ANGULAR_SPEED,
                                          self.MAX_ANGULAR_SPEED)
         self.gyro_controller.setAbsoluteTolerance(0)
+        self.gyro_controller.setContinuous()
         self.gyro_controller.setName("Gyro controller")
 
         self.last_right_encoder_value = 0
         self.last_left_encoder_value = 0
         self.counter = 0
 
-    @feedback(key="right_velocity")
-    def get_right_velocity(self):
-        dist = ((self.auto_right_motor.getQuadraturePosition()
+    def get_right(self):
+        self.right_pos = ((self.auto_right_motor.getQuadraturePosition()
                 / self.RESOLUTION) * self.WHEEL_DIAMETER)
-        self.right_vel = (dist - self.last_right_encoder_value) / 0.02
-        self.last_right_encoder_value = dist
-        return self.right_vel
+        return self.right_pos
 
-    def get_left_velocity(self):
-        dist = ((self.auto_left_motor.getQuadraturePosition()
+    def get_left(self):
+        self.left_pos = -((self.auto_left_motor.getQuadraturePosition()
                 / self.RESOLUTION) * self.WHEEL_DIAMETER)
-        self.left_vel = (dist - self.last_left_encoder_value) / 0.02
+        return self.left_pos
 
-        self.last_left_encoder_value = dist
-        return self.left_vel
-
-    def get_angular_velocity(self):
-        return self.navx.getRate()
+    def get_yaw(self):
+        self.angle = self.navx.getYaw()
+        return self.angle
 
     @state(first=True)
     def reset(self):
@@ -138,31 +128,33 @@ class RightAuto(AutonomousStateMachine):
 
     @state(must_finish=True)
     def execute_auto(self):
-        self.left_encoder_controller.setReference(self.left_velocity[self.counter])
+        self.left_encoder_controller.setReference(self.left_position[self.counter])
         self.left_output = self.left_encoder_controller.update()
-        self.right_encoder_controller.setReference(self.right_velocity[self.counter])
+        self.right_encoder_controller.setReference(self.right_position[self.counter])
         self.right_output = self.right_encoder_controller.update()
-        self.gyro_controller.setReference(self.angular_velocity[self.counter])
+        self.gyro_controller.setReference(self.heading[self.counter])
         self.gyro_output = self.gyro_controller.update()
 
         self.printer()
-        self.counter += 1
 
         self.drivetrain.tank_move(self.left_output + self.gyro_output,
                                   self.right_output - self.gyro_output)
-
-        if self.counter == len(self.angular_velocity):
+        self.counter += 1
+        if self.counter == len(self.heading):
             self.done()
 
     def printer(self):
         self.tab.putNumber("counter", self.counter)
-        self.tab.putNumber("right vel diff", self.get_right_velocity())
-        self.tab.putNumber("left vel diff", self.get_left_velocity())
-        self.tab.putNumber("angular vel diff", self.get_angular_velocity())
-        self.tab.putNumber("angular vel", self.navx.getRate())
-        self.tab.putNumber("right vel", self.right_vel)
-        self.tab.putNumber("left vel", self.left_vel)
-        self.tab.putNumber("leftPID output", self.left_output)
-        self.tab.putNumber("rightPID output", self.right_output)
+
+        self.tab.putNumber("Right Position", self.right_pos)
+        self.tab.putNumber("Right Setpoint", self.right_position[self.counter])
+        self.tab.putNumber("RightPID output", self.right_output)
+
+        self.tab.putNumber("Left Position", self.left_pos)
+        self.tab.putNumber("Left Setpoint", self.left_position[self.counter])
+        self.tab.putNumber("LeftPID output", self.left_output)
+
+        self.tab.putNumber("gyro Position", self.angle)
+        self.tab.putNumber("gyro Setpoint", self.heading[self.counter])
         self.tab.putNumber("gyroPID output", self.gyro_output)
 

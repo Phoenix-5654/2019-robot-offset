@@ -28,6 +28,9 @@ class MyRobot(MagicRobot):
     RIGHT_CONTROLLER_HAND = wpilib.XboxController.Hand.kRight
     LEFT_CONTROLLER_HAND = wpilib.XboxController.Hand.kLeft
 
+    RESOLUTION = 1024
+    WHEEL_DIAMETER = 0.1524
+
     def createObjects(self):
 
         NetworkTables.initialize()
@@ -141,8 +144,24 @@ class MyRobot(MagicRobot):
 
         self.tab.putNumber('Yaw', self.navx.getYaw())
         self.tab.putBoolean("Is vision enabled", self.auto_aligner.enabled)
-        self.tab.putNumber("Right Dist", (self.right_front_motor.getQuadraturePosition() / 1024) * 6 * 2.54)
-        self.tab.putNumber("Left Dist", (self.left_front_motor.getQuadraturePosition() / 1024) * 6 * 2.54)
+        self.tab.putNumber("Right Dist", self.get_right())
+        self.tab.putNumber("Left Dist", self.get_left())
+
+
+
+    def get_right(self):
+        self.right_pos = ((self.auto_right_motor.getQuadraturePosition()
+                / self.RESOLUTION) * self.WHEEL_DIAMETER)
+        return self.right_pos
+
+    def get_left(self):
+        self.left_pos = ((self.auto_left_motor.getQuadraturePosition()
+                / self.RESOLUTION) * self.WHEEL_DIAMETER)
+        return self.left_pos
+
+    def get_yaw(self):
+        self.angle = self.navx.getYaw()
+        return self.angle
 
 
 if __name__ == "__main__":
