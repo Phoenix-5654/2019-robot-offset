@@ -19,7 +19,7 @@ class AutoAligner:
 
     def setup(self):
         self.x_controller = PIDController(
-            0.01, 0, 0, measurement_source=self.get_x_error)
+            0.005, 0, 0, measurement_source=self.get_x_error)
 
         self.x_controller.setInputRange(-self.VERTICAL_RES, self.VERTICAL_RES)
         self.x_controller.setOutputRange(-self.MAX_X_SPEED,
