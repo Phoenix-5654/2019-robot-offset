@@ -26,8 +26,8 @@ class GripPipeline:
         """
 
         self.__hsv_threshold_hue = [0.0, 180.0]
-        self.__hsv_threshold_saturation = [0, 123.0]
-        self.__hsv_threshold_value = [167, 255.0]
+        self.__hsv_threshold_saturation = [0, 235.0]
+        self.__hsv_threshold_value = [103, 231.0]
 
         self.hsv_threshold_output = None
 
@@ -198,7 +198,7 @@ def start_camera():
     "properties": [
         {
             "name": "brightness",
-            "value": 10
+            "value": 0
         },
         {
             "name": "contrast",
@@ -206,7 +206,7 @@ def start_camera():
         },
         {
             "name": "saturation",
-            "value": 100
+            "value": 40
         }
     ],
     "width": """ + str(VERTICAL_RES) + """
