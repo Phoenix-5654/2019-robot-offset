@@ -9,21 +9,11 @@ class Motor:
     def __init__(self):
         self.forward = self.backward = False
 
-    def switch_pressed(self, switch):
-        try:
-            value = switch.get()
-            print(value)
-            return value
-        except AttributeError:
-            return False
-
     def set_forward(self):
-        if not self.switch_pressed(self.cfg.forward_switch):
-            self.forward = True
+        self.forward = True
 
     def set_backward(self):
-        if self.switch_pressed(self.cfg.backward_switch):
-            self.backward = True
+        self.backward = True
 
     def execute(self):
         if self.forward:

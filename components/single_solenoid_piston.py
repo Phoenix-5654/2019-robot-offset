@@ -14,7 +14,7 @@ class SingleSolenoidPiston:
 
     def execute(self):
         if self.enable_change_mode:
-            if self.value == True:
+            if self.value:
                 self.value = False
             else:
                 self.value = True

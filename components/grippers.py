@@ -1,11 +1,12 @@
 import ctre
 from magicbot import tunable
 
+
 class Grippers:
     left_motor: ctre.VictorSPX
     right_motor: ctre.VictorSPX
-    INTAKE_SPEED = tunable(default=0.5)
-    EJECT_SPEED = tunable(default=0.5)
+    INTAKE_SPEED = tunable(default=-0.5)
+    EJECT_SPEED = tunable(default=-0.6)
 
     def __init__(self):
         self.intake = self.exhaust = False
@@ -19,12 +20,12 @@ class Grippers:
     def execute(self):
         if self.intake:
             self.left_motor.set(
-                mode=ctre.ControlMode.PercentOutput, demand0=self.INTAKE_SPEED)
+                mode=ctre.ControlMode.PercentOutput, demand0=-self.INTAKE_SPEED)
             self.right_motor.set(
                 mode=ctre.ControlMode.PercentOutput, demand0=self.INTAKE_SPEED)
         elif self.exhaust:
             self.left_motor.set(
-                mode=ctre.ControlMode.PercentOutput, demand0=-self.EJECT_SPEED)
+                mode=ctre.ControlMode.PercentOutput, demand0=self.EJECT_SPEED)
             self.right_motor.set(
                 mode=ctre.ControlMode.PercentOutput, demand0=-self.EJECT_SPEED)
         else:

@@ -1,6 +1,6 @@
 import ctre
-import navx
 import wpilib
+import wpilib.buttons
 import wpilib.drive
 from magicbot import MagicRobot
 from networktables import NetworkTables
@@ -8,11 +8,10 @@ from networktables import NetworkTables
 from components.autoaligner import AutoAligner
 from components.drivetrain import Drivetrain
 from components.grippers import Grippers
-from components.piston import Piston
 from components.motor import Motor, MotorConfig
+from components.piston import Piston
+from components.pressure_indicator import PressureIndicator
 from components.single_solenoid_piston import SingleSolenoidPiston
-
-from autonomous.right_auto import RightAuto
 
 
 class MyRobot(MagicRobot):
@@ -23,13 +22,12 @@ class MyRobot(MagicRobot):
     gripper_piston: Piston
     panel_mechanism_piston: Piston
     first_hatch_panel_piston: SingleSolenoidPiston
+    ramp_pistons: SingleSolenoidPiston
     ramp: Motor
+    pressure_indicator: PressureIndicator
 
     RIGHT_CONTROLLER_HAND = wpilib.XboxController.Hand.kRight
     LEFT_CONTROLLER_HAND = wpilib.XboxController.Hand.kLeft
-
-    RESOLUTION = 1024
-    WHEEL_DIAMETER = 0.1524
 
     def createObjects(self):
 
@@ -37,17 +35,17 @@ class MyRobot(MagicRobot):
 
         wpilib.CameraServer.launch()
 
-        self.tab = NetworkTables.getTable('Navx')
-
         self.auto_left_motor = self.left_front_motor = ctre.WPI_TalonSRX(1)
         self.left_rear_motor = ctre.WPI_VictorSPX(2)
+        self.left_rear_motor.follow(self.auto_left_motor)
 
         self.auto_right_motor = self.right_front_motor = ctre.WPI_TalonSRX(3)
         self.right_rear_motor = ctre.WPI_VictorSPX(4)
+        self.right_rear_motor.follow(self.auto_right_motor)
+        self.auto_right_motor.setSensorPhase(True)
 
-
-        self.grippers_left_motor = ctre.WPI_VictorSPX(6)
-        self.grippers_right_motor = ctre.WPI_VictorSPX(9)
+        self.grippers_left_motor = ctre.WPI_VictorSPX(8)
+        self.grippers_right_motor = ctre.WPI_VictorSPX(7)
 
         self.left = wpilib.SpeedControllerGroup(
             self.left_front_motor, self.left_rear_motor
@@ -62,52 +60,53 @@ class MyRobot(MagicRobot):
         )
 
         self.hatch_panel_piston_solenoid = wpilib.DoubleSolenoid(1, 0)
-        self.gripper_piston_solenoid = wpilib.DoubleSolenoid(4, 6)
-        self.panel_mechanism_piston_solenoid = wpilib.DoubleSolenoid(2, 7)
+        self.gripper_piston_solenoid = wpilib.DoubleSolenoid(2, 3)
+        self.panel_mechanism_piston_solenoid = wpilib.DoubleSolenoid(4, 5)
 
-        self.first_hatch_panel_piston_solenoid = wpilib.Solenoid(3)
+        self.first_hatch_panel_piston_solenoid = wpilib.Solenoid(7)
+        self.ramp_pistons_solenoid = wpilib.Solenoid(6)
 
         self.ramp_motor = ctre.WPI_TalonSRX(6)
-
-        self.ramp_switch = wpilib.DigitalInput(0)
 
         self.ramp_cfg = MotorConfig(
             motor=self.ramp_motor,
             speed=1.0,
             forward_switch=None,
-            backward_switch=self.ramp_switch
+            backward_switch=None
         )
 
-        self.navx = navx.AHRS.create_i2c()
-        self.navx.reset()
+        self.pressure_indicator_sensor = wpilib.AnalogInput(0)
 
         self.right_joystick = wpilib.Joystick(0)
         self.left_joystick = wpilib.Joystick(1)
 
         self.controller = wpilib.XboxController(2)
 
-
-    def testInit(self):
-        self.auto_aligner.reset()
-
-    def teleopInit(self):
-
-        self.auto_aligner.reset()
+        self.auto_aligner_button = wpilib.buttons.JoystickButton(self.right_joystick, 2)
 
     def teleopPeriodic(self):
 
-        if self.controller.getStartButtonPressed():
+        if self.auto_aligner_button.get():
             self.auto_aligner.enable()
-
-        if self.controller.getBackButtonPressed():
+            self.auto_aligner.set_y(-self.right_joystick.getY())
+        else:
             self.auto_aligner.reset()
 
+        if self.controller.getStartButtonPressed():
+            self.drivetrain.lock()
+
+        if self.controller.getBackButtonPressed():
+            self.drivetrain.unlock()
+
+        if self.controller.getStickButtonPressed(self.RIGHT_CONTROLLER_HAND):
+            self.ramp_pistons.change_mode()
+
         if self.controller.getBButtonPressed():
-            self.navx.reset()
             self.gripper_piston.change_mode()
 
         if self.controller.getTriggerAxis(self.RIGHT_CONTROLLER_HAND) > 0.1:
             self.grippers.exhaust_ball()
+
         elif self.controller.getTriggerAxis(self.LEFT_CONTROLLER_HAND) > 0.1:
             self.grippers.intake_ball()
 
@@ -116,8 +115,6 @@ class MyRobot(MagicRobot):
 
         if self.controller.getAButtonPressed():
             self.hatch_panel_piston.change_mode()
-
-
 
         if self.controller.getYButtonPressed():
             self.panel_mechanism_piston.change_mode()
@@ -141,27 +138,6 @@ class MyRobot(MagicRobot):
                     -self.right_joystick.getY(),
                     True
                 )
-
-        self.tab.putNumber('Yaw', self.navx.getYaw())
-        self.tab.putBoolean("Is vision enabled", self.auto_aligner.enabled)
-        self.tab.putNumber("Right Dist", self.get_right())
-        self.tab.putNumber("Left Dist", self.get_left())
-
-
-
-    def get_right(self):
-        self.right_pos = ((self.auto_right_motor.getQuadraturePosition()
-                / self.RESOLUTION) * self.WHEEL_DIAMETER)
-        return self.right_pos
-
-    def get_left(self):
-        self.left_pos = ((self.auto_left_motor.getQuadraturePosition()
-                / self.RESOLUTION) * self.WHEEL_DIAMETER)
-        return self.left_pos
-
-    def get_yaw(self):
-        self.angle = self.navx.getYaw()
-        return self.angle
 
 
 if __name__ == "__main__":

@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
+import itertools
 from heapq import nsmallest
 from math import sqrt, tan, radians
-import itertools
-import json
 
 import cv2
 import numpy as np
-from networktables import NetworkTables
-
 from cscore import CameraServer, UsbCamera, VideoSource
+from networktables import NetworkTables
 
 HORIZONTAL_RES = 240
 VERTICAL_RES = 320
 FPS = 90
 ERROR_VALUE = 0
 
-SET_POINT = (VERTICAL_RES // 2 + 28, HORIZONTAL_RES // 2 + 43)
+SET_POINT = (VERTICAL_RES // 2, HORIZONTAL_RES // 2 + 43)
+
 
 class GripPipeline:
     """
@@ -26,9 +25,9 @@ class GripPipeline:
         """initializes all values to presets or None if need to be set
         """
 
-        self.__hsv_threshold_hue = [84, 180.0]
-        self.__hsv_threshold_saturation = [0, 255.0]
-        self.__hsv_threshold_value = [151, 255.0]
+        self.__hsv_threshold_hue = [0.0, 180.0]
+        self.__hsv_threshold_saturation = [0, 123.0]
+        self.__hsv_threshold_value = [167, 255.0]
 
         self.hsv_threshold_output = None
 
@@ -38,7 +37,7 @@ class GripPipeline:
         self.find_contours_output = None
 
         self.__filter_contours_contours = self.find_contours_output
-        self.__filter_contours_min_area = 100.0
+        self.__filter_contours_min_area = 150.0
         self.__filter_contours_min_perimeter = 0.0
         self.__filter_contours_min_width = 0.0
         self.__filter_contours_max_width = 1000.0
@@ -63,7 +62,8 @@ class GripPipeline:
         # Step HSV_Threshold0:
         self.__hsv_threshold_input = source0
         (self.hsv_threshold_output) = self.__hsv_threshold(self.__hsv_threshold_input,
-                                                           self.__hsv_threshold_hue, self.__hsv_threshold_saturation, self.__hsv_threshold_value)
+                                                           self.__hsv_threshold_hue, self.__hsv_threshold_saturation,
+                                                           self.__hsv_threshold_value)
 
         # Step Find_Contours0:
         self.__find_contours_input = self.hsv_threshold_output
@@ -72,8 +72,18 @@ class GripPipeline:
 
         # Step Filter_Contours0:
         self.__filter_contours_contours = self.find_contours_output
-        (self.filter_contours_output) = self.__filter_contours(self.__filter_contours_contours, self.__filter_contours_min_area, self.__filter_contours_min_perimeter, self.__filter_contours_min_width, self.__filter_contours_max_width,
-                                                               self.__filter_contours_min_height, self.__filter_contours_max_height, self.__filter_contours_solidity, self.__filter_contours_max_vertices, self.__filter_contours_min_vertices, self.__filter_contours_min_ratio, self.__filter_contours_max_ratio)
+        (self.filter_contours_output) = self.__filter_contours(self.__filter_contours_contours,
+                                                               self.__filter_contours_min_area,
+                                                               self.__filter_contours_min_perimeter,
+                                                               self.__filter_contours_min_width,
+                                                               self.__filter_contours_max_width,
+                                                               self.__filter_contours_min_height,
+                                                               self.__filter_contours_max_height,
+                                                               self.__filter_contours_solidity,
+                                                               self.__filter_contours_max_vertices,
+                                                               self.__filter_contours_min_vertices,
+                                                               self.__filter_contours_min_ratio,
+                                                               self.__filter_contours_max_ratio)
 
         # Step Convex_Hulls0:
         self.__convex_hulls_contours = self.filter_contours_output
@@ -92,7 +102,7 @@ class GripPipeline:
             A black and white numpy.ndarray.
         """
         out = cv2.cvtColor(input, cv2.COLOR_BGR2HSV)
-        return cv2.inRange(out, (hue[0], sat[0], val[0]),  (hue[1], sat[1], val[1]))
+        return cv2.inRange(out, (hue[0], sat[0], val[0]), (hue[1], sat[1], val[1]))
 
     @staticmethod
     def __find_contours(input, external_only):
@@ -103,7 +113,7 @@ class GripPipeline:
         Return:
             A list of numpy.ndarray where each one represents a contour.
         """
-        if(external_only):
+        if (external_only):
             mode = cv2.RETR_EXTERNAL
         else:
             mode = cv2.RETR_LIST
@@ -246,9 +256,9 @@ def find_alignment_center(shapes, k):
         first = combination[0]
         second = combination[1]
         if (distance(first.lowest_point, second.lowest_point)
-            > distance(first.second_highest_point, second.second_highest_point)):
+                > distance(first.second_highest_point, second.second_highest_point)):
             val = ((distance(first.lowest_point, second.lowest_point) +
-                   distance(first.second_highest_point, second.second_highest_point))
+                    distance(first.second_highest_point, second.second_highest_point))
                    / (k * (first.approx_area + second.approx_area)))
 
             if (val < min_val):
@@ -264,7 +274,7 @@ def distance(point1: tuple, point2: tuple):
 
 def get_average_point(point1, point2):
     return (((point1[0] + point2[0]) / 2,
-            (point1[1] + point2[1]) / 2))
+             (point1[1] + point2[1]) / 2))
 
 
 def main():
@@ -275,7 +285,6 @@ def main():
     sd.putNumber('k', 1e-09)
 
     inst, camera = start_camera()
-    start_
 
     pipeline = GripPipeline()
 
@@ -296,7 +305,6 @@ def main():
         time, img = cvSink.grabFrame(img)
 
         if time == 0:
-
             outputStream.notifyError(cvSink.getError())
 
             continue
@@ -350,7 +358,7 @@ def main():
                 sd.putNumber(
                     'Distance', 11.5 / tan(radians(target_y_angle + 15)))
             else:
-                    sd.putNumber("X Error", ERROR_VALUE)
+                sd.putNumber("X Error", ERROR_VALUE)
 
             if targets is not None:
 
@@ -362,30 +370,29 @@ def main():
                         'Target Difference', targets[1].lowest_point[1] - targets[0].lowest_point[1])
                 sd.putNumber("Dist Up",
                              abs(targets[0].highest_point[0]
-                                            - targets[1].highest_point[0]))
+                                 - targets[1].highest_point[0]))
                 sd.putNumber("Dist Second highest",
                              abs(targets[0].second_highest_point[0]
                                  - targets[1].second_highest_point[0]))
                 sd.putNumber("Dist Down",
                              abs(targets[0].lowest_point[0]
-                                              - targets[1].lowest_point[0]))
+                                 - targets[1].lowest_point[0]))
                 sum1 = (abs(targets[0].second_highest_point[0]
-                                 - targets[1].second_highest_point[0])
-                             + abs(targets[0].lowest_point[0]
-                                   - targets[1].lowest_point[0]))
+                            - targets[1].second_highest_point[0])
+                        + abs(targets[0].lowest_point[0]
+                              - targets[1].lowest_point[0]))
                 sd.putNumber("SUM 1", sum1)
                 sum2 = (abs(targets[0].highest_point[1] - targets[0].lowest_point[1])
-                             + abs(targets[1].highest_point[1] - targets[1].highest_point[1]))
+                        + abs(targets[1].highest_point[1] - targets[1].highest_point[1]))
                 sd.putNumber("SUM 2", sum2)
                 sd.putNumber("FRACTION 1", sum1 / sum2)
                 sd.putNumber("FRACTION 2", sum2 / sum1)
                 sd.putNumber("FRACTION 3", abs(targets[0].second_highest_point[0]
-                                 - targets[1].second_highest_point[0]) / sum2)
+                                               - targets[1].second_highest_point[0]) / sum2)
                 sd.putNumber("Multiply 1", sum1 * sum2)
-                sd.putNumber("Multiply 2",  abs(targets[0].second_highest_point[0]
-                                 - targets[1].second_highest_point[0]) * sum2)
+                sd.putNumber("Multiply 2", abs(targets[0].second_highest_point[0]
+                                               - targets[1].second_highest_point[0]) * sum2)
                 sd.putNumber("approx yaw", ((sum2 / sum1) - 0.3587) / 0.0053)
-
 
         else:
             sd.putNumber("X Error", ERROR_VALUE)

@@ -11,7 +11,8 @@ from typing_extensions import Protocol
 
 import wpilib
 
-__any__ = ("ControllerRunner", "PIDController", "Controller", "MeasurementSource")
+__any__ = ("ControllerRunner", "PIDController",
+           "Controller", "MeasurementSource")
 
 
 class Controller(Protocol):
