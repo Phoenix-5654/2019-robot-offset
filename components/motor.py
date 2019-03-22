@@ -1,6 +1,7 @@
 from collections import namedtuple
+
 MotorConfig = namedtuple(
-    "MotorConfig", ['motor', 'speed', 'forward_switch', 'backward_switch'])
+    "MotorConfig", ['motor', 'speed'])
 
 
 class Motor:

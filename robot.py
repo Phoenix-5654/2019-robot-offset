@@ -70,9 +70,7 @@ class MyRobot(MagicRobot):
 
         self.ramp_cfg = MotorConfig(
             motor=self.ramp_motor,
-            speed=1.0,
-            forward_switch=None,
-            backward_switch=None
+            speed=1.0
         )
 
         self.pressure_indicator_sensor = wpilib.AnalogInput(0)
@@ -83,6 +81,8 @@ class MyRobot(MagicRobot):
         self.controller = wpilib.XboxController(2)
 
         self.auto_aligner_button = wpilib.buttons.JoystickButton(self.right_joystick, 2)
+
+        self.use_teleop_in_autonomous = True
 
     def teleopPeriodic(self):
 

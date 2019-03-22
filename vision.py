@@ -13,7 +13,7 @@ VERTICAL_RES = 320
 FPS = 90
 ERROR_VALUE = 0
 
-SET_POINT = (VERTICAL_RES // 2, HORIZONTAL_RES // 2 + 43)
+SET_POINT = (VERTICAL_RES // 2 - 8, HORIZONTAL_RES // 2 + 43)
 
 
 class GripPipeline:
@@ -25,9 +25,13 @@ class GripPipeline:
         """initializes all values to presets or None if need to be set
         """
 
+        # self.__hsv_threshold_hue = [0.0, 180.0]
+        # self.__hsv_threshold_saturation = [147, 255.0]
+        # self.__hsv_threshold_value = [103, 255.0]
+
         self.__hsv_threshold_hue = [0.0, 180.0]
-        self.__hsv_threshold_saturation = [0, 235.0]
-        self.__hsv_threshold_value = [103, 231.0]
+        self.__hsv_threshold_saturation = [0, 255.0]
+        self.__hsv_threshold_value = [110, 255.0]
 
         self.hsv_threshold_output = None
 
@@ -212,7 +216,6 @@ def start_camera():
     "width": """ + str(VERTICAL_RES) + """
 }
     """)
-    inst.startAutomaticCapture(camera=camera)
 
     camera.setConnectionStrategy(VideoSource.ConnectionStrategy.kKeepOpen)
 

@@ -6,7 +6,7 @@ class Grippers:
     left_motor: ctre.VictorSPX
     right_motor: ctre.VictorSPX
     INTAKE_SPEED = tunable(default=-0.5)
-    EJECT_SPEED = tunable(default=-0.6)
+    EJECT_SPEED = tunable(default=-0.7)
 
     def __init__(self):
         self.intake = self.exhaust = False
