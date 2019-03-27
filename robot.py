@@ -80,6 +80,7 @@ class MyRobot(MagicRobot):
         self.controller = wpilib.XboxController(2)
 
         self.auto_aligner_button = wpilib.buttons.JoystickButton(self.right_joystick, 2)
+        self.position_align_button = wpilib.buttons.JoystickButton(self.left_joystick, 2)
 
         self.use_teleop_in_autonomous = True
 
@@ -90,6 +91,9 @@ class MyRobot(MagicRobot):
             self.auto_aligner.set_y(-self.right_joystick.getY())
         else:
             self.auto_aligner.reset()
+
+        if self.position_align_button.get():
+            self.auto_aligner.get_to_position()
 
         if self.controller.getStartButtonPressed():
             self.drivetrain.lock()
