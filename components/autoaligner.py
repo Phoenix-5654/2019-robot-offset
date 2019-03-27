@@ -1,3 +1,4 @@
+import wpilib
 from magicbot import tunable
 from networktables import NetworkTables
 
@@ -10,7 +11,10 @@ class AutoAligner:
     HORIZONTAL_RES = 240
     VERTICAL_RES = 320
 
+    SCALED_VOLTAGE = 5 / 1024
+
     drivetrain: Drivetrain
+    range_sensor: wpilib.Ultrasonic
 
     def __init__(self):
         self.vision = NetworkTables.getTable('Vision')
@@ -52,3 +56,8 @@ class AutoAligner:
                 x_output,
                 self.y_output
             )
+
+        self.vision.putNumber(
+            "Range Sensor [cm]",
+            self.range_sensor.getRangeMM() / 10
+        )

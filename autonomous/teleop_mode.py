@@ -1,17 +1,11 @@
-import ctre
-import wpilib
-import wpilib.drive
 import wpilib.buttons
-from magicbot import MagicRobot
-from networktables import NetworkTables
+from magicbot import AutonomousStateMachine, state
 
 from components.drivetrain import Drivetrain
 from components.grippers import Grippers
+from components.motor import Motor
 from components.piston import Piston
-from components.motor import Motor, MotorConfig
 from components.single_solenoid_piston import SingleSolenoidPiston
-from components.pressure_indicator import PressureIndicator
-from magicbot import AutonomousStateMachine, state
 
 
 class TeleopMode(AutonomousStateMachine):
@@ -23,7 +17,6 @@ class TeleopMode(AutonomousStateMachine):
     first_hatch_panel_piston: SingleSolenoidPiston
     ramp_pistons: SingleSolenoidPiston
     ramp: Motor
-    pressure_indicator: PressureIndicator
     controller: wpilib.XboxController
     right_joystick: wpilib.Joystick
     left_joystick: wpilib.Joystick

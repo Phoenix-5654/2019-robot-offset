@@ -10,7 +10,6 @@ from components.drivetrain import Drivetrain
 from components.grippers import Grippers
 from components.motor import Motor, MotorConfig
 from components.piston import Piston
-from components.pressure_indicator import PressureIndicator
 from components.single_solenoid_piston import SingleSolenoidPiston
 
 
@@ -24,7 +23,6 @@ class MyRobot(MagicRobot):
     first_hatch_panel_piston: SingleSolenoidPiston
     ramp_pistons: SingleSolenoidPiston
     ramp: Motor
-    pressure_indicator: PressureIndicator
 
     RIGHT_CONTROLLER_HAND = wpilib.XboxController.Hand.kRight
     LEFT_CONTROLLER_HAND = wpilib.XboxController.Hand.kLeft
@@ -73,7 +71,8 @@ class MyRobot(MagicRobot):
             speed=1.0
         )
 
-        self.pressure_indicator_sensor = wpilib.AnalogInput(0)
+        self.range_sensor = wpilib.Ultrasonic(0, 1, wpilib.Ultrasonic.Unit.kMillimeters)
+        self.range_sensor.setAutomaticMode(True)
 
         self.right_joystick = wpilib.Joystick(0)
         self.left_joystick = wpilib.Joystick(1)
